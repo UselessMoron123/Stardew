@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SaveGame xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<player>
+<name>Рэй</name>
+<GameLocation xsi:type="IslandLocation">
+<buildings />
+<animals />
+<piecesOfHay>0</piecesOfHay>
+<characters />
+<objects />
+<resourceClumps />
+<largeTerrainFeatures>
+<LargeTerrainFeature xsi:type="Bush">
+<tilePosition>
+<X>2</X>
+<Y>4</Y>
+</tilePosition>
+<isDestroyedByNPCTrample>false</isDestroyedByNPCTrample>
+<size>4</size>
+<datePlanted>0</datePlanted>
+<tileSheetOffset>1</tileSheetOffset>
+<health>0</health>
+<flipped>false</flipped>
+<townBush>false</townBush>
+<inPot>
+<boolean>false</boolean>
+</inPot>
+<drawShadow>true</drawShadow>
+</LargeTerrainFeature>
+</largeTerrainFeatures>
+<terrainFeatures />
+<name>CaptainRoom</name>
+<waterColor>
+<B>84</B>
+<G>84</G>
+<R>84</R>
+<A>84</A>
+<PackedValue>1414812756</PackedValue>
+</waterColor>
+<isFarm>false</isFarm>
+<isOutdoors>false</isOutdoors>
+<isStructure>false</isStructure>
+<ignoreDebrisWeather>false</ignoreDebrisWeather>
+<ignoreOutdoorLighting>false</ignoreOutdoorLighting>
+<ignoreLights>false</ignoreLights>
+<treatAsOutdoors>true</treatAsOutdoors>
+<numberOfSpawnedObjectsOnMap>0</numberOfSpawnedObjectsOnMap>
+<miniJukeboxCount>0</miniJukeboxCount>
+<miniJukeboxTrack />
+<furniture />
+<Animals>
+<SerializableDictionaryOfInt64FarmAnimal />
+</Animals>
+<IsGreenhouse>false</IsGreenhouse>
+</GameLocation>
