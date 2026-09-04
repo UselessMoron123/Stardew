@@ -1,0 +1,5 @@
+probe01	14.4 MB	Farm, FarmHouse, Town, Beach, Mountain
+probe02	15.6 MB	Forest, BusStop, Mine, BugLand, Desert
+probe03	15.9 MB	Woods, Railroad, Backwoods, Cellar, IslandSouth
+probe04	15.7 MB	IslandEast, IslandWest, IslandNorth, IslandNorthCave1, CaptainRoom
+probe05	10.9 MB	IslandShrine, Caldera, DesertFestival
