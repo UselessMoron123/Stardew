@@ -1,68 +1,57 @@
-# Ground-probe experiment
+# Ground probe experiment (v2 — with sweep)
 
-Goal: recover the **exact playable-ground coordinate map** of every zone — i.e. which tiles
-the game treats as valid ground for natural objects (stone/weed/twig litter, forage like coral
-and clams, grass, trees, bushes, resource clumps).
+Goal: turn each zone's *exact playable-ground coordinates* into the
+`terrainFeatures` XML you use in your custom maps.
 
-## Why HoeDirt instead of Stone
+## How it works
 
-The game does **not** re-validate plain objects (`Stone`, `Twig`, …) when loading a save —
-they persist even on water (that's why probing with them keeps everything).
-But it *does* validate tilled dirt: on load, every `HoeDirt` terrainFeature is checked by
-`HoeDirt.checkForRemoval()` and removed if the tile is:
+1. Every tile in `0,0 .. 150,150` of a location gets a **probe** entry.
+2. On load the game validates probes against the real map collision grid:
+   * `HoeDirt` probes on invalid tiles are **deleted** → holes = non-ground;
+   * `Grass` probes on invalid tiles are **converted to bushes** → nothing
+     is lost: surviving grass = ground, new bushes = not ground.
+3. After a save+quit, the returned file *is* the occupied-coordinate map.
 
-- not on a `Diggable` "Back"-layer tile (water, pavement, cliffs, bridges, floors, off the map),
-- covered by an object, a clump, or a tree/bush,
-- under a building.
+### The catch found in v1 (why one load was not enough)
 
-`Diggable` is exactly the ground predicate the game uses when spawning litter, forage, grass,
-trees, bushes and clumps — so surviving dirt after one load = perfect "nature ground" map.
+Load-time validation is **gated by player distance** (≈±30 tiles around the
+farmer, tile coordinates — same box applied in *every* location at once).
+That is exactly the observed result: "small uneven patches" of pruned dirt
+around the spawn, the rest untouched.
 
-## The 5 probe saves
+So we **sweep**: move the spawn, load again. The 6-pass grid
+`(24,24) (80,24) (136,24) (24,82) (80,82) (136,82)` covers the full
+0..150 × 0..150 area. Walking around inside the current pass also extends
+coverage — the more you walk, the less the next sweep pass has to fix.
 
-Built by `tools/probe_save.py` from `Забытая Farm/Забытая`. Each target location had its
-`objects`, `terrainFeatures`, `largeTerrainFeatures`, `resourceClumps`, `farmPatches` and
-`buildings` wiped and refilled with a `HoeDirt` probe on every tile of `0,0 .. 150,150`
-(22,801 probes/zone). All other 57 locations are untouched.
+## Protocol (all with `tools/probe_fill.bat`, no Python needed)
 
-| folder | zones | size |
-|---|---|---|
-| probe01 | Farm, FarmHouse, Town, Beach, Mountain | ~14 MB |
-| probe02 | Forest, BusStop, Mine, BugLand, Desert | ~16 MB |
-| probe03 | Woods, Railroad, Backwoods, Cellar, IslandSouth | ~16 MB |
-| probe04 | IslandEast, IslandWest, IslandNorth, IslandNorthCave1, CaptainRoom | ~16 MB |
-| probe05 | IslandShrine, Caldera, DesertFestival | ~11 MB |
+0. Convert your save to XML (your converter).
+1. **Run `probe_fill.bat`, mode B** on the XML file, zone = e.g. `Farm`,
+   probe type = **grass**, clear litter = Y, drop buildings = N.
+2. **Mode C** on the same file, pass 1 (empty X/Y = auto-sweep; it also
+   snapshots `FILE.baseline` — keep it, it is what we diff against).
+3. Put the file back where saves live → load → wait ~10 s → **walk around**
+   (that expands the validated box) → *Save and quit* (never sleep; sleeping
+   starts a new day and re-copies litter).
+4. Convert the played save, overwrite the working XML, run **mode C** again
+   → pass 2 … repeat until it says all 6 passes done.
+5. Analysis (either by me — hand back the final XML — or yourself with
+   `python tools/probe_read.py FINAL.xml --baseline FILE.baseline`):
+   the table shows kept / lost / →bush per zone and the **gate check** that
+   proves the ±30-tile behavior on your game version.
 
-## Procedure (per save)
+If the gate check says "pruning reached far beyond the player", one pass
+was enough and the rest are just refinements.
 
-1. Copy the `probeNN` folder into `%APPDATA%\StardewValley\Saves` (Proton/Linux: the game's
-   `…/drive_c/users/…/AppData/Roaming/StardewValley/Saves`).
-2. In-game: load `probeNN`, wait ~10 s (location load + dirt pruning happen while loading);
-   walk around briefly. To be thorough, warp through each probed zone once.
-3. **Do NOT sleep** — unwatered dry dirt reverts on day change and you'd lose the evidence.
-4. Esc → Save and quit.
-5. Export the resulting save to XML (same way the other files in this repo were made; if you
-   can only produce the raw 1.6 binary save, upload that instead — it can be parsed too).
+## Notes
 
-Optionally run the reader yourself:
-
-```
-python3 tools/probe_read.py results/probe01.xml results/probe02.xml ... --out probe_results
-```
-
-It writes per-zone `probes_<zone>.png` (green = ground survived · dark = pruned · blue =
-artifact spot on water · orange = fresh litter), `probes_<zone>.csv` (all surviving
-coordinates) and `probe_summary.md` with bbox/area/fill% per zone. If a zone shows
-`NO PRUNING HAPPENED`, its save was not actually loaded by the game.
-
-Expected sanity anchors: Farm ≈ a 70×45ish block with the pond hole + house footprint punched
-out; Town = 128-wide rect with pavement holes; Beach = sand strip; interiors (FarmHouse,
-Cellar, CaptainRoom, caves…) ≈ 0 surviving tiles.
-
-Then hand over the pruned files and the consolidated area-size map gets assembled from them.
-
-## Regenerating
-
-```
-python3 tools/probe_save.py --save "Забытая Farm/Забытая" --max-x 150 --max-y 150 --batch 5
-```
+* `probe01..05` folders are v1 batches (dirt probes, no sweep). Their
+  played results taught us the gate behavior; you can re-do them with the
+  new protocol for complete maps.
+* Spawn locations outside a map's walkable area are clamped by the game —
+  harmless (boxes overlap), analysis only counts what actually changed.
+* Interiors: `FarmHouse`/cellars/barns will show "all probes lost" — that
+  is real: their 0..150 ground under the buildings is already defined by
+  building warps; skip interior sweeps. Mine-shaft floors are not dirt-able
+  by design — the mod must keep its own collision for the mine network.
